@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: nameder-backend
+    env: docker
+    rootDir: backend
+    plan: free
+    dockerCommand: ''
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: DB_HOST
+        fromDatabase:
+          name: nameder-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: nameder-db
+          property: port
+      - key: DB_USERNAME
+        fromDatabase:
+          name: nameder-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: nameder-db
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: nameder-db
+          property: database
+      - key: FRONTEND_URL
+        value: https://nameder-frontend.onrender.com
+  - type: web
+    name: nameder-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://nameder-backend.onrender.com
+databases:
+  - name: nameder-db
+    plan: free

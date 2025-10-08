@@ -1,0 +1,66 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Preference } from '../entities/preference.entity';
+import { PreferenceValue } from '../../common/enums/preference-value.enum';
+import { SetPreferenceDto } from '../dto/set-preference.dto';
+import { SessionsService } from '../../sessions/services/sessions.service';
+
+@Injectable()
+export class PreferencesService {
+  constructor(
+    @InjectRepository(Preference)
+    private readonly preferenceRepository: Repository<Preference>,
+    private readonly sessionsService: SessionsService,
+  ) {}
+
+  async setPreference(sessionId: string, dto: SetPreferenceDto) {
+    const participant = await this.sessionsService.ensureParticipant(sessionId, dto.participantId);
+
+    const preference = await this.preferenceRepository.findOne({
+      where: { sessionId, participantId: participant.id, nameId: dto.nameId },
+    });
+
+    if (preference) {
+      preference.value = dto.value;
+      return this.preferenceRepository.save(preference);
+    }
+
+    const newPreference = this.preferenceRepository.create({
+      sessionId,
+      participantId: participant.id,
+      nameId: dto.nameId,
+      value: dto.value,
+    });
+    return this.preferenceRepository.save(newPreference);
+  }
+
+  async getMutualNames(sessionId: string) {
+    const { session } = await this.sessionsService.getSessionDetails(sessionId);
+    const participantCount = Math.max(2, session.participants.length);
+
+    const mutual = await this.preferenceRepository
+      .createQueryBuilder('preference')
+      .leftJoinAndSelect('preference.name', 'name')
+      .where('preference.sessionId = :sessionId', { sessionId })
+      .andWhere('preference.value = :like', { like: PreferenceValue.LIKE })
+      .groupBy('preference.nameId')
+      .addGroupBy('name.id')
+      .having('COUNT(DISTINCT preference.participantId) >= :participantCount', { participantCount })
+      .orderBy('name.baseScore', 'DESC')
+      .getMany();
+
+    return mutual.map((preference) => preference.name);
+  }
+
+  async getParticipantSummary(sessionId: string, participantId: string) {
+    await this.sessionsService.ensureParticipant(sessionId, participantId);
+    const likeCount = await this.preferenceRepository.count({
+      where: { sessionId, participantId, value: PreferenceValue.LIKE },
+    });
+    const dislikeCount = await this.preferenceRepository.count({
+      where: { sessionId, participantId, value: PreferenceValue.DISLIKE },
+    });
+    return { likes: likeCount, dislikes: dislikeCount };
+  }
+}
