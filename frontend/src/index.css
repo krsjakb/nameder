@@ -180,6 +180,17 @@ button {
   font-size: 0.8rem;
 }
 
+.session__filters {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.session__filters .tabs {
+  margin-bottom: 0;
+}
+
 .swipe {
   align-items: center;
   text-align: center;

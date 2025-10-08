@@ -2,6 +2,8 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import AppDataSource from '../database/data-source';
 import { GivenName } from '../names/entities/given-name.entity';
+import { Preference } from '../preferences/entities/preference.entity';
+import { Rating } from '../ratings/entities/rating.entity';
 import { Gender } from '../common/enums/gender.enum';
 import { estimateSyllableCount, normalizeHungarianText, scoreNameForLastName } from '../common/utils/text';
 
@@ -30,7 +32,7 @@ async function seed() {
   const maleNames = loadNames('names/ferfinevek.json');
   const femaleNames = loadNames('names/noinevek.json');
 
-  await repository.clear();
+  await AppDataSource.manager.query('TRUNCATE TABLE "preferences", "ratings", "given_names" RESTART IDENTITY CASCADE');
 
   const defaultLastName = 'Kovács';
   const nameMap = new Map<string, GivenName>();

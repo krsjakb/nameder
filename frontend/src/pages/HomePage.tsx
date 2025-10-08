@@ -1,4 +1,5 @@
-import { FormEvent, useState } from 'react'
+import type { FormEvent } from 'react'
+import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Card from '../components/Card'

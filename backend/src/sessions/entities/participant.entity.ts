@@ -11,7 +11,7 @@ export class Participant {
   @Column({ length: 120 })
   displayName!: string;
 
-  @Column({ length: 120, nullable: true })
+  @Column({ type: 'varchar', length: 120, nullable: true })
   email?: string | null;
 
   @Index({ unique: true })

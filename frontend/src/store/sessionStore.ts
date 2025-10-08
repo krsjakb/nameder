@@ -1,24 +1,26 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Participant, SessionSummary } from '../api/types'
+import type { Participant, SessionSummary, Gender } from '../api/types'
 
-interface SessionContext {
+export interface SessionContext {
   session?: SessionSummary
   participant?: Participant
 }
 
-interface SessionStoreState {
-  context?: SessionContext
-  setContext: (context: SessionContext) => void
-  clear: () => void
+export interface SessionStoreState {
+  context: SessionContext | null
+  preferredGender: Gender | null
+  setContext: (context: SessionContext | null) => void
+  setPreferredGender: (gender: Gender | null) => void
 }
 
 export const useSessionStore = create<SessionStoreState>()(
   persist(
     (set) => ({
-      context: undefined,
+      context: null,
+      preferredGender: null,
       setContext: (context) => set({ context }),
-      clear: () => set({ context: undefined }),
+      setPreferredGender: (gender) => set({ preferredGender: gender }),
     }),
     {
       name: 'nameder-session',

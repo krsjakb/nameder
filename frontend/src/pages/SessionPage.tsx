@@ -17,6 +17,7 @@ import TopList from '../components/TopList'
 import InviteCard from '../components/InviteCard'
 import TabNavigation from '../components/TabNavigation'
 import Button from '../components/Button'
+import type { Gender } from '../api/types'
 
 const TABS = [
   { id: 'swipe', label: 'Szavazás' },
@@ -29,6 +30,8 @@ export function SessionPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const storedContext = useSessionStore((state) => state.context)
   const setContext = useSessionStore((state) => state.setContext)
+  const preferredGender = useSessionStore((state) => state.preferredGender)
+  const setPreferredGender = useSessionStore((state) => state.setPreferredGender)
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
@@ -68,16 +71,18 @@ export function SessionPage() {
     }
   }, [participantId, sessionQuery.data, sessionQuery.isFetched, navigate])
 
+  const genderFilterKey = preferredGender ?? 'ALL'
+
   const nextNameQuery = useQuery({
-    queryKey: ['nextName', sessionId, participantId],
-    queryFn: () => getNextName(sessionId!, participantId!),
+    queryKey: ['nextName', sessionId, participantId, genderFilterKey],
+    queryFn: () => getNextName(sessionId!, participantId!, preferredGender ?? undefined),
     enabled: Boolean(sessionId && participantId),
     retry: false,
   })
 
   const recommendationsQuery = useQuery({
-    queryKey: ['recommendations', sessionId],
-    queryFn: () => getRecommendations(sessionId!, 6),
+    queryKey: ['recommendations', sessionId, genderFilterKey],
+    queryFn: () => getRecommendations(sessionId!, 6, preferredGender ?? undefined),
     enabled: Boolean(sessionId),
   })
 
@@ -106,14 +111,17 @@ export function SessionPage() {
         value,
         participantId: participantId!,
       }),
-    onSuccess: async () => {
-      await Promise.all([
+    onSuccess: () => {
+      void Promise.all([
         queryClient.invalidateQueries({ queryKey: ['nextName', sessionId, participantId] }),
         queryClient.invalidateQueries({ queryKey: ['session', sessionId, participantId] }),
         queryClient.invalidateQueries({ queryKey: ['mutual', sessionId] }),
         queryClient.invalidateQueries({ queryKey: ['ratings', sessionId] }),
         queryClient.invalidateQueries({ queryKey: ['participantRatings', sessionId, participantId] }),
-      ])
+        queryClient.invalidateQueries({ queryKey: ['recommendations', sessionId] }),
+      ]).catch((error) => {
+        console.error('Failed to refresh session data after preference update', error)
+      })
     },
   })
 
@@ -160,6 +168,17 @@ export function SessionPage() {
     return sessionQuery.data.session.phase === 'PRIMARY' && sessionQuery.data.stats.mutualCount > 0
   }, [sessionQuery.data])
 
+  const genderTabs: { id: string; label: string; value: Gender | null }[] = [
+    { id: 'ALL', label: 'Mindegy', value: null },
+    { id: 'FEMALE', label: 'Lány', value: 'FEMALE' },
+    { id: 'MALE', label: 'Fiú', value: 'MALE' },
+  ]
+
+  const handleGenderSelect = (id: string) => {
+    const selected = genderTabs.find((tab) => tab.id === id)
+    setPreferredGender(selected?.value ?? null)
+  }
+
   return (
     <div className="session">
       {sessionQuery.data && (
@@ -174,6 +193,14 @@ export function SessionPage() {
         {sessionQuery.data ? (
           <InviteCard sessionCode={sessionQuery.data.session.code} lastName={sessionQuery.data.session.lastName} />
         ) : null}
+        <div className="session__filters">
+          <span className="session__filters-label">Preferált nem:</span>
+          <TabNavigation
+            tabs={genderTabs.map(({ id, label }) => ({ id, label }))}
+            activeId={genderFilterKey}
+            onChange={handleGenderSelect}
+          />
+        </div>
         {canAdvanceToFinal ? (
           <Button
             variant="secondary"

@@ -5,12 +5,15 @@ import { Preference } from '../entities/preference.entity';
 import { PreferenceValue } from '../../common/enums/preference-value.enum';
 import { SetPreferenceDto } from '../dto/set-preference.dto';
 import { SessionsService } from '../../sessions/services/sessions.service';
+import { GivenName } from '../../names/entities/given-name.entity';
 
 @Injectable()
 export class PreferencesService {
   constructor(
     @InjectRepository(Preference)
     private readonly preferenceRepository: Repository<Preference>,
+    @InjectRepository(GivenName)
+    private readonly givenNameRepository: Repository<GivenName>,
     private readonly sessionsService: SessionsService,
   ) {}
 
@@ -39,18 +42,25 @@ export class PreferencesService {
     const { session } = await this.sessionsService.getSessionDetails(sessionId);
     const participantCount = Math.max(2, session.participants.length);
 
-    const mutual = await this.preferenceRepository
+    const mutualResults = await this.preferenceRepository
       .createQueryBuilder('preference')
-      .leftJoinAndSelect('preference.name', 'name')
+      .select('preference.nameId', 'nameId')
       .where('preference.sessionId = :sessionId', { sessionId })
       .andWhere('preference.value = :like', { like: PreferenceValue.LIKE })
       .groupBy('preference.nameId')
-      .addGroupBy('name.id')
       .having('COUNT(DISTINCT preference.participantId) >= :participantCount', { participantCount })
+      .getRawMany();
+
+    const nameIds = mutualResults.map((row: { nameId: string }) => row.nameId);
+    if (nameIds.length === 0) {
+      return [];
+    }
+
+    return this.givenNameRepository
+      .createQueryBuilder('name')
+      .where('name.id IN (:...nameIds)', { nameIds })
       .orderBy('name.baseScore', 'DESC')
       .getMany();
-
-    return mutual.map((preference) => preference.name);
   }
 
   async getParticipantSummary(sessionId: string, participantId: string) {

@@ -29,8 +29,8 @@ export const SwipeCard = memo(function SwipeCard({
   return (
     <Card className="swipe">
       <div className="swipe__title">
-        <span className="swipe__first-name">{displayName}</span>
         <span className="swipe__last-name">{lastName}</span>
+        <span className="swipe__first-name">{displayName}</span>
       </div>
       <div className="swipe__score">Hangzás pontszám: {score.toFixed(2)}</div>
       <div className="swipe__actions">

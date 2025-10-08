@@ -52,18 +52,23 @@ export class NamesService {
       }
     }
 
-    qb.orderBy('name.baseScore', 'DESC').limit(50);
-
-    const candidateNames = await qb.getMany();
+    const candidateNames = await qb.orderBy('name.baseScore', 'DESC').limit(50).getMany();
 
     const scoredCandidates = candidateNames
       .map((candidate) => ({
         candidate,
         score: scoreNameForLastName(candidate.value, session.lastName) + candidate.baseScore,
+        tieBreaker: Math.random(),
       }))
-      .sort((a, b) => b.score - a.score);
+      .sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
+        return a.tieBreaker - b.tieBreaker;
+      });
 
     const nextCandidate = scoredCandidates[0];
+
     if (!nextCandidate) {
       throw new NotFoundException('No more names to review');
     }
