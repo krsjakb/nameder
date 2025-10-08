@@ -6,6 +6,12 @@ export async function setPreference(sessionId: string, payload: PreferenceReques
   return response.data
 }
 
+export async function removePreference(sessionId: string, participantId: string, nameId: string) {
+  await apiClient.delete(`/sessions/${sessionId}/preferences/${nameId}`, {
+    params: { participantId },
+  })
+}
+
 export async function getPreferenceSummary(sessionId: string, participantId: string) {
   const response = await apiClient.get<PreferenceSummary>(`/sessions/${sessionId}/preferences/summary`, {
     params: { participantId },

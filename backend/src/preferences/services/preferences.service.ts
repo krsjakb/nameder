@@ -38,6 +38,11 @@ export class PreferencesService {
     return this.preferenceRepository.save(newPreference);
   }
 
+  async removePreference(sessionId: string, participantId: string, nameId: string) {
+    await this.sessionsService.ensureParticipant(sessionId, participantId);
+    await this.preferenceRepository.delete({ sessionId, participantId, nameId });
+  }
+
   async getMutualNames(sessionId: string) {
     const { session } = await this.sessionsService.getSessionDetails(sessionId);
     const participantCount = Math.max(2, session.participants.length);

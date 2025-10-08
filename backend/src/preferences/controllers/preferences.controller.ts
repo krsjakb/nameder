@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
 import { PreferencesService } from '../services/preferences.service';
 import { SetPreferenceDto } from '../dto/set-preference.dto';
 
@@ -15,6 +15,16 @@ export class PreferencesController {
       nameId: preference.nameId,
       participantId: preference.participantId,
     };
+  }
+
+  @Delete(':nameId')
+  async removePreference(
+    @Param('sessionId') sessionId: string,
+    @Param('nameId') nameId: string,
+    @Query('participantId') participantId: string,
+  ) {
+    await this.preferencesService.removePreference(sessionId, participantId, nameId);
+    return { success: true };
   }
 
   @Get('mutual')

@@ -24,6 +24,14 @@ export async function joinSession(code: string, payload: JoinSessionRequest) {
   return response.data
 }
 
+export async function getSessionByCode(code: string) {
+  const response = await apiClient.get<{
+    session: SessionSummary
+    participants: Participant[]
+  }>(`/sessions/code/${code}`)
+  return response.data
+}
+
 export async function getSessionDetails(sessionId: string, participantId?: string) {
   const response = await apiClient.get<SessionDetailsResponse>(`/sessions/${sessionId}`, {
     params: participantId ? { participantId } : undefined,

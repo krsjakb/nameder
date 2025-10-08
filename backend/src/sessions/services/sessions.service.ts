@@ -65,6 +65,18 @@ export class SessionsService {
     return { session, participant };
   }
 
+  async getSessionByCode(code: string) {
+    const session = await this.sessionRepository.findOne({
+      where: { code },
+      relations: ['participants'],
+    });
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
+    return session;
+  }
+
   async getSessionDetails(sessionId: string, participantId?: string) {
     const session = await this.sessionRepository.findOne({
       where: { id: sessionId },

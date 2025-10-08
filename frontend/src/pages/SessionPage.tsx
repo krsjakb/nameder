@@ -6,7 +6,7 @@ import {
   updateSessionPhase,
 } from '../api/sessions'
 import { getNextName, getRecommendations, getMutualNames } from '../api/names'
-import { setPreference } from '../api/preferences'
+import { removePreference, setPreference } from '../api/preferences'
 import { getParticipantRatings, getRatings, upsertRating } from '../api/ratings'
 import { useSessionStore } from '../store/sessionStore'
 import { useKeyboardSwipe } from '../hooks/useKeyboardSwipe'
@@ -17,13 +17,19 @@ import TopList from '../components/TopList'
 import InviteCard from '../components/InviteCard'
 import TabNavigation from '../components/TabNavigation'
 import Button from '../components/Button'
-import type { Gender } from '../api/types'
+import type { Gender, NextNameResponse } from '../api/types'
 
 const TABS = [
   { id: 'swipe', label: 'Szavazás' },
   { id: 'mutual', label: 'Közös kedvencek' },
   { id: 'top', label: 'Toplista' },
 ]
+
+type HistoryEntry = {
+  snapshot: NextNameResponse
+  preference: 'LIKE' | 'DISLIKE'
+  genderKey: string
+}
 
 export function SessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
@@ -39,6 +45,10 @@ export function SessionPage() {
   const participantId = participantIdFromUrl ?? storedContext?.participant?.id
 
   const [activeTab, setActiveTab] = useState('swipe')
+  const [history, setHistory] = useState<HistoryEntry[]>([])
+
+  const genderFilterKey = preferredGender ?? 'ALL'
+  const recommendationQueryKey = ['recommendations', sessionId, genderFilterKey] as const
 
   const sessionQuery = useQuery({
     queryKey: ['session', sessionId, participantId],
@@ -71,7 +81,9 @@ export function SessionPage() {
     }
   }, [participantId, sessionQuery.data, sessionQuery.isFetched, navigate])
 
-  const genderFilterKey = preferredGender ?? 'ALL'
+  useEffect(() => {
+    setHistory([])
+  }, [sessionId, participantId, genderFilterKey])
 
   const nextNameQuery = useQuery({
     queryKey: ['nextName', sessionId, participantId, genderFilterKey],
@@ -81,7 +93,7 @@ export function SessionPage() {
   })
 
   const recommendationsQuery = useQuery({
-    queryKey: ['recommendations', sessionId, genderFilterKey],
+    queryKey: recommendationQueryKey,
     queryFn: () => getRecommendations(sessionId!, 6, preferredGender ?? undefined),
     enabled: Boolean(sessionId),
   })
@@ -104,6 +116,25 @@ export function SessionPage() {
     enabled: Boolean(sessionId && participantId),
   })
 
+  const invalidateSessionQueries = (options?: { includeNextName?: boolean }) => {
+    if (!sessionId || !participantId) {
+      return Promise.resolve()
+    }
+    const tasks = [
+      queryClient.invalidateQueries({ queryKey: ['session', sessionId, participantId] }),
+      queryClient.invalidateQueries({ queryKey: ['mutual', sessionId] }),
+      queryClient.invalidateQueries({ queryKey: ['ratings', sessionId] }),
+      queryClient.invalidateQueries({ queryKey: ['participantRatings', sessionId, participantId] }),
+      queryClient.invalidateQueries({ queryKey: recommendationQueryKey }),
+    ]
+    if (options?.includeNextName !== false) {
+      tasks.push(queryClient.invalidateQueries({ queryKey: ['nextName', sessionId, participantId] }))
+    }
+    return Promise.all(tasks).catch((error) => {
+      console.error('Failed to refresh session data', error)
+    })
+  }
+
   const preferenceMutation = useMutation({
     mutationFn: (value: 'LIKE' | 'DISLIKE') =>
       setPreference(sessionId!, {
@@ -112,16 +143,33 @@ export function SessionPage() {
         participantId: participantId!,
       }),
     onSuccess: () => {
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['nextName', sessionId, participantId] }),
-        queryClient.invalidateQueries({ queryKey: ['session', sessionId, participantId] }),
-        queryClient.invalidateQueries({ queryKey: ['mutual', sessionId] }),
-        queryClient.invalidateQueries({ queryKey: ['ratings', sessionId] }),
-        queryClient.invalidateQueries({ queryKey: ['participantRatings', sessionId, participantId] }),
-        queryClient.invalidateQueries({ queryKey: ['recommendations', sessionId] }),
-      ]).catch((error) => {
-        console.error('Failed to refresh session data after preference update', error)
+      void invalidateSessionQueries()
+    },
+  })
+
+  const undoMutation = useMutation({
+    mutationFn: async (entry: HistoryEntry) => {
+      await removePreference(sessionId!, participantId!, entry.snapshot.name.id)
+      return entry
+    },
+    onMutate: async (entry) => {
+      await queryClient.cancelQueries({
+        queryKey: ['nextName', sessionId, participantId, entry.genderKey],
       })
+      setHistory((prev: HistoryEntry[]) => prev.filter((candidate) => candidate !== entry))
+      return { entry }
+    },
+    onError: (_error, _entry, context?: { entry: HistoryEntry }) => {
+      if (context?.entry) {
+        setHistory((prev: HistoryEntry[]) => [context.entry, ...prev])
+      }
+    },
+    onSuccess: (entry) => {
+      queryClient.setQueryData(
+        ['nextName', sessionId, participantId, entry.genderKey],
+        entry.snapshot,
+      )
+      void invalidateSessionQueries({ includeNextName: false })
     },
   })
 
@@ -145,14 +193,44 @@ export function SessionPage() {
     },
   })
 
+  const pushHistory = (value: 'LIKE' | 'DISLIKE') => {
+    if (!nextNameQuery.data) return null
+    const entry: HistoryEntry = {
+      snapshot: nextNameQuery.data,
+      preference: value,
+      genderKey: genderFilterKey,
+    }
+    setHistory((prev) => [entry, ...prev])
+    return entry
+  }
+
   const handleLike = () => {
     if (!nextNameQuery.data || preferenceMutation.isPending) return
-    preferenceMutation.mutate('LIKE')
+    const entry = pushHistory('LIKE')
+    preferenceMutation.mutate('LIKE', {
+      onError: () => {
+        if (entry) {
+          setHistory((prev) => prev.filter((candidate) => candidate !== entry))
+        }
+      },
+    })
   }
 
   const handleDislike = () => {
     if (!nextNameQuery.data || preferenceMutation.isPending) return
-    preferenceMutation.mutate('DISLIKE')
+    const entry = pushHistory('DISLIKE')
+    preferenceMutation.mutate('DISLIKE', {
+      onError: () => {
+        if (entry) {
+          setHistory((prev) => prev.filter((candidate) => candidate !== entry))
+        }
+      },
+    })
+  }
+
+  const handleUndo = () => {
+    if (!history.length || undoMutation.isPending) return
+    undoMutation.mutate(history[0])
   }
 
   useKeyboardSwipe(handleLike, handleDislike, activeTab === 'swipe')
@@ -237,7 +315,9 @@ export function SessionPage() {
               reviewed={currentName.reviewed}
               onLike={handleLike}
               onDislike={handleDislike}
-              disabled={preferenceMutation.isPending}
+              onUndo={history.length ? handleUndo : undefined}
+              undoDisabled={undoMutation.isPending}
+              disabled={preferenceMutation.isPending || undoMutation.isPending}
               recommendations={recommendations}
             />
           ) : nextNameQuery.isError ? (

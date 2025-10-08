@@ -46,6 +46,25 @@ export class SessionsController {
     };
   }
 
+  @Get('code/:code')
+  async getSessionByCode(@Param('code') code: string) {
+    const session = await this.sessionsService.getSessionByCode(code);
+    return {
+      session: {
+        id: session.id,
+        code: session.code,
+        lastName: session.lastName,
+        phase: session.phase,
+      },
+      participants: session.participants.map((participant) => ({
+        id: participant.id,
+        displayName: participant.displayName,
+        inviteCode: participant.inviteCode,
+        isCreator: participant.isCreator,
+      })),
+    };
+  }
+
   @Get(':sessionId')
   async getSession(@Param('sessionId') sessionId: string, @Query('participantId') participantId?: string) {
     const result = await this.sessionsService.getSessionDetails(sessionId, participantId);

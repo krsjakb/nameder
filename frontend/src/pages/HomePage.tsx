@@ -1,12 +1,13 @@
 import type { FormEvent } from 'react'
-import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Card from '../components/Card'
 import TextField from '../components/TextField'
 import Button from '../components/Button'
-import { createSession, joinSession } from '../api/sessions'
+import { createSession, getSessionByCode, joinSession } from '../api/sessions'
 import { useSessionStore } from '../store/sessionStore'
+import type { Participant, SessionSummary } from '../api/types'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -15,7 +16,15 @@ export function HomePage() {
 
   const [createForm, setCreateForm] = useState({ lastName: '', displayName: '', email: '' })
   const [joinForm, setJoinForm] = useState({ code: inviteCode, displayName: '', email: '' })
+  const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null)
   const setContext = useSessionStore((state) => state.setContext)
+
+  const sessionLookupQuery = useQuery<{ session: SessionSummary; participants: Participant[] }>({
+    queryKey: ['sessionByCode', joinForm.code],
+    queryFn: () => getSessionByCode(joinForm.code),
+    enabled: joinForm.code.length >= 6,
+    staleTime: 30_000,
+  })
 
   const createMutation = useMutation({
     mutationFn: () => createSession({
@@ -47,8 +56,31 @@ export function HomePage() {
 
   const handleJoinSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (selectedParticipantId && sessionLookupQuery.data) {
+      const { session, participants } = sessionLookupQuery.data
+      const participant = participants.find(
+        (participantItem: Participant) => participantItem.id === selectedParticipantId,
+      )
+      if (participant) {
+        setContext({ session, participant })
+        navigate(`/session/${session.id}?participantId=${participant.id}`)
+        return
+      }
+    }
     joinMutation.mutate()
   }
+
+  const handleSelectExistingParticipant = (participant: Participant) => {
+    if (!sessionLookupQuery.data) return
+    setSelectedParticipantId(participant.id)
+    setContext({ session: sessionLookupQuery.data.session, participant })
+    navigate(`/session/${sessionLookupQuery.data.session.id}?participantId=${participant.id}`)
+  }
+
+  const availableParticipants: Participant[] = useMemo(
+    () => sessionLookupQuery.data?.participants ?? [],
+    [sessionLookupQuery.data?.participants],
+  )
 
   return (
     <div className="home">
@@ -94,6 +126,7 @@ export function HomePage() {
             onChange={(event) => {
               const value = event.target.value.toUpperCase()
               setJoinForm((prev) => ({ ...prev, code: value }))
+              setSelectedParticipantId(null)
               setParams((params) => {
                 const next = new URLSearchParams(params)
                 if (value) {
@@ -111,7 +144,7 @@ export function HomePage() {
             name="joinDisplayName"
             value={joinForm.displayName}
             onChange={(event) => setJoinForm((prev) => ({ ...prev, displayName: event.target.value }))}
-            required
+            required={!selectedParticipantId}
           />
           <TextField
             label="E-mail (opcionális)"
@@ -120,6 +153,25 @@ export function HomePage() {
             value={joinForm.email}
             onChange={(event) => setJoinForm((prev) => ({ ...prev, email: event.target.value }))}
           />
+          {availableParticipants.length ? (
+            <div className="home__participant-select">
+              <p className="home__participant-select-label">Melyik felhasználó vagy te?</p>
+              <div className="home__participant-options">
+                {availableParticipants.map((participant) => (
+                  <button
+                    key={participant.id}
+                    type="button"
+                    className={`home__participant-button${selectedParticipantId === participant.id ? ' home__participant-button--active' : ''}`}
+                    onClick={() => handleSelectExistingParticipant(participant)}
+                  >
+                    <span className="home__participant-name">{participant.displayName}</span>
+                    {participant.isCreator ? <span className="home__participant-badge">Szervező</span> : null}
+                  </button>
+                ))}
+              </div>
+              <p className="home__participant-hint">Ha nem szerepelsz a listán, add meg a neved és csatlakozz új résztvevőként.</p>
+            </div>
+          ) : null}
           <Button type="submit" disabled={joinMutation.isPending}>
             Csatlakozás
           </Button>
