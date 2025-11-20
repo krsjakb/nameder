@@ -4,7 +4,7 @@ import { SetPreferenceDto } from '../dto/set-preference.dto';
 
 @Controller('sessions/:sessionId/preferences')
 export class PreferencesController {
-  constructor(private readonly preferencesService: PreferencesService) {}
+  constructor(private readonly preferencesService: PreferencesService) { }
 
   @Post()
   async setPreference(@Param('sessionId') sessionId: string, @Body() dto: SetPreferenceDto) {
@@ -41,5 +41,15 @@ export class PreferencesController {
   async getSummary(@Param('sessionId') sessionId: string, @Query('participantId') participantId: string) {
     const summary = await this.preferencesService.getParticipantSummary(sessionId, participantId);
     return summary;
+  }
+
+  @Get('my-likes')
+  async getMyLikes(@Param('sessionId') sessionId: string, @Query('participantId') participantId: string) {
+    const likes = await this.preferencesService.getParticipantLikes(sessionId, participantId);
+    return likes.map((name) => ({
+      id: name.id,
+      value: name.value,
+      gender: name.gender,
+    }));
   }
 }

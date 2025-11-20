@@ -7,6 +7,7 @@ import { NamesModule } from './names/names.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { PreferencesModule } from './preferences/preferences.module';
 import { RatingsModule } from './ratings/ratings.module';
+import { AdminModule } from './admin/admin.module';
 import { GivenName } from './names/entities/given-name.entity';
 import { Session } from './sessions/entities/session.entity';
 import { Participant } from './sessions/entities/participant.entity';
@@ -42,6 +43,7 @@ import { Rating } from './ratings/entities/rating.entity';
     SessionsModule,
     PreferencesModule,
     RatingsModule,
+    AdminModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }

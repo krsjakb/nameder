@@ -6,7 +6,7 @@ import {
   updateSessionPhase,
 } from '../api/sessions'
 import { getNextName, getRecommendations, getMutualNames } from '../api/names'
-import { removePreference, setPreference } from '../api/preferences'
+import { removePreference, setPreference, getMyLikes } from '../api/preferences'
 import { getParticipantRatings, getRatings, upsertRating } from '../api/ratings'
 import { useSessionStore } from '../store/sessionStore'
 import { useKeyboardSwipe } from '../hooks/useKeyboardSwipe'
@@ -15,6 +15,7 @@ import { useTheme } from '../hooks/useTheme'
 import SessionHeader from '../components/SessionHeader'
 import SwipeCard from '../components/SwipeCard'
 import MutualList from '../components/MutualList'
+import MyLikesList from '../components/MyLikesList'
 import TopList from '../components/TopList'
 import InviteCard from '../components/InviteCard'
 import TabNavigation from '../components/TabNavigation'
@@ -27,7 +28,8 @@ import type { Gender, NextNameResponse } from '../api/types'
 
 const TABS = [
   { id: 'swipe', label: 'Szavazás' },
-  { id: 'mutual', label: 'Közös kedvencek' },
+  { id: 'mutual', label: 'Közös' },
+  { id: 'mylikes', label: 'Saját' },
   { id: 'top', label: 'Toplista' },
 ]
 
@@ -126,6 +128,12 @@ export function SessionPage() {
     enabled: Boolean(sessionId && participantId),
   })
 
+  const myLikesQuery = useQuery({
+    queryKey: ['myLikes', sessionId, participantId],
+    queryFn: () => getMyLikes(sessionId!, participantId!),
+    enabled: Boolean(sessionId && participantId),
+  })
+
   const invalidateSessionQueries = (options?: { includeNextName?: boolean }) => {
     if (!sessionId || !participantId) {
       return Promise.resolve()
@@ -135,6 +143,7 @@ export function SessionPage() {
       queryClient.invalidateQueries({ queryKey: ['mutual', sessionId] }),
       queryClient.invalidateQueries({ queryKey: ['ratings', sessionId] }),
       queryClient.invalidateQueries({ queryKey: ['participantRatings', sessionId, participantId] }),
+      queryClient.invalidateQueries({ queryKey: ['myLikes', sessionId, participantId] }),
       queryClient.invalidateQueries({ queryKey: recommendationQueryKey }),
     ]
     if (options?.includeNextName !== false) {
@@ -342,7 +351,9 @@ export function SessionPage() {
               ? mutualNames.length
               : tab.id === 'top'
                 ? ratings.length
-                : undefined,
+                : tab.id === 'mylikes'
+                  ? (myLikesQuery.data ? myLikesQuery.data.length : 0)
+                  : undefined,
         }))}
         activeId={activeTab}
         onChange={setActiveTab}
@@ -389,6 +400,8 @@ export function SessionPage() {
           canRate={Boolean(participantId)}
         />
       )}
+
+      {activeTab === 'mylikes' && <MyLikesList names={myLikesQuery.data ?? []} />}
 
       {activeTab === 'top' && <TopList ratings={ratings} />}
     </div>

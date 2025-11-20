@@ -15,7 +15,7 @@ export class PreferencesService {
     @InjectRepository(GivenName)
     private readonly givenNameRepository: Repository<GivenName>,
     private readonly sessionsService: SessionsService,
-  ) {}
+  ) { }
 
   async setPreference(sessionId: string, dto: SetPreferenceDto) {
     const participant = await this.sessionsService.ensureParticipant(sessionId, dto.participantId);
@@ -77,5 +77,26 @@ export class PreferencesService {
       where: { sessionId, participantId, value: PreferenceValue.DISLIKE },
     });
     return { likes: likeCount, dislikes: dislikeCount };
+  }
+
+  async getParticipantLikes(sessionId: string, participantId: string) {
+    await this.sessionsService.ensureParticipant(sessionId, participantId);
+
+    const likes = await this.preferenceRepository.find({
+      where: { sessionId, participantId, value: PreferenceValue.LIKE },
+      select: ['nameId'],
+    });
+
+    const nameIds = likes.map((like) => like.nameId);
+
+    if (nameIds.length === 0) {
+      return [];
+    }
+
+    return this.givenNameRepository
+      .createQueryBuilder('name')
+      .where('name.id IN (:...nameIds)', { nameIds })
+      .orderBy('name.value', 'ASC')
+      .getMany();
   }
 }
