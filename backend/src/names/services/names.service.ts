@@ -23,7 +23,7 @@ export class NamesService {
     private readonly sessionsRepository: Repository<Session>,
     @InjectRepository(Preference)
     private readonly preferenceRepository: Repository<Preference>,
-  ) {}
+  ) { }
 
   async getNextName(sessionId: string, participantId: string, preferredGender?: Gender): Promise<NextNameResult> {
     const session = await this.sessionsRepository.findOne({ where: { id: sessionId } });
@@ -38,7 +38,18 @@ export class NamesService {
       .andWhere('preference.sessionId = :sessionId', { sessionId })
       .getRawMany();
 
-    const excludedIds = ratedIds.map((row) => row.nameId);
+    // Also exclude names that ANY participant has disliked
+    const dislikedByAnyIds = await this.preferenceRepository
+      .createQueryBuilder('preference')
+      .select('preference.nameId', 'nameId')
+      .where('preference.sessionId = :sessionId', { sessionId })
+      .andWhere('preference.value = :value', { value: 'DISLIKE' })
+      .getRawMany();
+
+    const excludedIds = [...new Set([
+      ...ratedIds.map((row) => row.nameId),
+      ...dislikedByAnyIds.map((row) => row.nameId),
+    ])];
 
     const qb = this.namesRepository.createQueryBuilder('name');
     if (excludedIds.length) {

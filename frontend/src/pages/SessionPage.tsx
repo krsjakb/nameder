@@ -10,6 +10,8 @@ import { removePreference, setPreference } from '../api/preferences'
 import { getParticipantRatings, getRatings, upsertRating } from '../api/ratings'
 import { useSessionStore } from '../store/sessionStore'
 import { useKeyboardSwipe } from '../hooks/useKeyboardSwipe'
+import { useToast } from '../hooks/useToast'
+import { useTheme } from '../hooks/useTheme'
 import SessionHeader from '../components/SessionHeader'
 import SwipeCard from '../components/SwipeCard'
 import MutualList from '../components/MutualList'
@@ -17,6 +19,10 @@ import TopList from '../components/TopList'
 import InviteCard from '../components/InviteCard'
 import TabNavigation from '../components/TabNavigation'
 import Button from '../components/Button'
+import Card from '../components/Card'
+import ToastNotification from '../components/ToastNotification'
+import ThemeToggle from '../components/ThemeToggle'
+import Confetti from '../components/Confetti'
 import type { Gender, NextNameResponse } from '../api/types'
 
 const TABS = [
@@ -46,6 +52,10 @@ export function SessionPage() {
 
   const [activeTab, setActiveTab] = useState('swipe')
   const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [showConfetti, setShowConfetti] = useState(false)
+
+  const { toasts, removeToast, success, error } = useToast()
+  const { theme, toggleTheme } = useTheme()
 
   const genderFilterKey = preferredGender ?? 'ALL'
   const recommendationQueryKey = ['recommendations', sessionId, genderFilterKey] as const
@@ -85,7 +95,7 @@ export function SessionPage() {
     setHistory([])
   }, [sessionId, participantId, genderFilterKey])
 
-  const nextNameQuery = useQuery({
+  const nextNameQuery = useQuery<NextNameResponse | null>({
     queryKey: ['nextName', sessionId, participantId, genderFilterKey],
     queryFn: () => getNextName(sessionId!, participantId!, preferredGender ?? undefined),
     enabled: Boolean(sessionId && participantId),
@@ -142,8 +152,26 @@ export function SessionPage() {
         value,
         participantId: participantId!,
       }),
-    onSuccess: () => {
-      void invalidateSessionQueries()
+    onSuccess: async (_data, value) => {
+      await invalidateSessionQueries()
+      success(value === 'LIKE' ? 'Név hozzáadva kedvencekhez' : 'Név elutasítva')
+
+      // Check if this created a new mutual match (both participants liked it)
+      if (value === 'LIKE') {
+        const mutualNames = await queryClient.fetchQuery({
+          queryKey: ['mutual', sessionId],
+          queryFn: () => getMutualNames(sessionId!),
+        })
+        // Check if the current name is now in mutual list
+        const isNewMutual = mutualNames?.some((m) => m.id === nextNameQuery.data!.name.id)
+        if (isNewMutual) {
+          setShowConfetti(true)
+          setTimeout(() => setShowConfetti(false), 3000)
+        }
+      }
+    },
+    onError: () => {
+      error('Hiba történt a szavazás mentése közben')
     },
   })
 
@@ -183,6 +211,10 @@ export function SessionPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ratings', sessionId] })
       queryClient.invalidateQueries({ queryKey: ['participantRatings', sessionId, participantId] })
+      success('Értékelés mentve')
+    },
+    onError: () => {
+      error('Hiba történt az értékelés mentése közben')
     },
   })
 
@@ -259,6 +291,9 @@ export function SessionPage() {
 
   return (
     <div className="session">
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
+      <Confetti active={showConfetti} />
+
       {sessionQuery.data && (
         <SessionHeader
           session={sessionQuery.data.session}
@@ -268,26 +303,33 @@ export function SessionPage() {
       )}
 
       <div className="session__top">
-        {sessionQuery.data ? (
-          <InviteCard sessionCode={sessionQuery.data.session.code} lastName={sessionQuery.data.session.lastName} />
-        ) : null}
-        <div className="session__filters">
-          <span className="session__filters-label">Preferált nem:</span>
-          <TabNavigation
-            tabs={genderTabs.map(({ id, label }) => ({ id, label }))}
-            activeId={genderFilterKey}
-            onChange={handleGenderSelect}
-          />
+        <div className="session__top-left">
+          {sessionQuery.data ? (
+            <InviteCard sessionCode={sessionQuery.data.session.code} lastName={sessionQuery.data.session.lastName} />
+          ) : null}
+          <Card>
+            <div className="session__filters">
+              <span className="session__filters-label">Preferált nem:</span>
+              <TabNavigation
+                tabs={genderTabs.map(({ id, label }) => ({ id, label }))}
+                activeId={genderFilterKey}
+                onChange={handleGenderSelect}
+              />
+            </div>
+          </Card>
         </div>
-        {canAdvanceToFinal ? (
-          <Button
-            variant="secondary"
-            onClick={() => phaseMutation.mutate('FINAL')}
-            disabled={phaseMutation.isPending}
-          >
-            Lépjünk a döntő szakaszba
-          </Button>
-        ) : null}
+        <div className="session__top-right">
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+          {canAdvanceToFinal ? (
+            <Button
+              variant="secondary"
+              onClick={() => phaseMutation.mutate('FINAL')}
+              disabled={phaseMutation.isPending}
+            >
+              Lépjünk a döntő szakaszba
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <TabNavigation
@@ -297,8 +339,8 @@ export function SessionPage() {
             tab.id === 'mutual'
               ? mutualNames.length
               : tab.id === 'top'
-              ? ratings.length
-              : undefined,
+                ? ratings.length
+                : undefined,
         }))}
         activeId={activeTab}
         onChange={setActiveTab}
@@ -320,6 +362,10 @@ export function SessionPage() {
               disabled={preferenceMutation.isPending || undoMutation.isPending}
               recommendations={recommendations}
             />
+          ) : currentName === null ? (
+            <div className="session__empty">
+              <p>Minden a szűrésnek megfelelő nevet értékeltél. Próbálj másik nemet választani, vagy nézd meg a közös kedvenceket!</p>
+            </div>
           ) : nextNameQuery.isError ? (
             <div className="session__empty">
               <p>Úgy tűnik, minden nevet átnéztetek. Lépjetek át a közös kedvencekhez vagy a toplistához!</p>
