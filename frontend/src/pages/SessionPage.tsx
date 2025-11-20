@@ -54,7 +54,7 @@ export function SessionPage() {
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [showConfetti, setShowConfetti] = useState(false)
 
-  const { toasts, removeToast, success, error } = useToast()
+  const { toasts, removeToast } = useToast()
   const { theme, toggleTheme } = useTheme()
 
   const genderFilterKey = preferredGender ?? 'ALL'
@@ -154,7 +154,7 @@ export function SessionPage() {
       }),
     onSuccess: async (_data, value) => {
       await invalidateSessionQueries()
-      success(value === 'LIKE' ? 'Név hozzáadva kedvencekhez' : 'Név elutasítva')
+      // success(value === 'LIKE' ? 'Név hozzáadva kedvencekhez' : 'Név elutasítva')
 
       // Check if this created a new mutual match (both participants liked it)
       if (value === 'LIKE') {
@@ -171,7 +171,7 @@ export function SessionPage() {
       }
     },
     onError: () => {
-      error('Hiba történt a szavazás mentése közben')
+      // error('Hiba történt a szavazás mentése közben')
     },
   })
 
@@ -191,6 +191,7 @@ export function SessionPage() {
       if (context?.entry) {
         setHistory((prev: HistoryEntry[]) => [context.entry, ...prev])
       }
+      // error('Hiba történt a visszavonás közben')
     },
     onSuccess: (entry) => {
       queryClient.setQueryData(
@@ -198,6 +199,7 @@ export function SessionPage() {
         entry.snapshot,
       )
       void invalidateSessionQueries({ includeNextName: false })
+      // success('Visszavonva')
     },
   })
 
@@ -211,10 +213,10 @@ export function SessionPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ratings', sessionId] })
       queryClient.invalidateQueries({ queryKey: ['participantRatings', sessionId, participantId] })
-      success('Értékelés mentve')
+      // success('Értékelés mentve')
     },
     onError: () => {
-      error('Hiba történt az értékelés mentése közben')
+      // error('Hiba történt az értékelés mentése közben')
     },
   })
 
