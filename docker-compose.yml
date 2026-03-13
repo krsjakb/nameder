@@ -1,4 +1,4 @@
-version: '3.9'
+version: "3.9"
 services:
   db:
     image: postgres:16-alpine
@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
   backend:
@@ -20,20 +20,20 @@ services:
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
       DB_NAME: nameder
-      DB_SYNCHRONIZE: 'true'
-      FRONTEND_URL: http://localhost:5173
+      DB_SYNCHRONIZE: "true"
+      FRONTEND_URL: http://127.0.0.1:5173
     depends_on:
       - db
     ports:
-      - '3000:3000'
+      - "3000:3000"
   frontend:
     build:
       context: ./frontend
       args:
-        VITE_API_URL: http://localhost:3000
+        VITE_API_URL: http://192.168.0.61:3000
     depends_on:
       - backend
     ports:
-      - '5173:80'
+      - "5173:80"
 volumes:
   db-data:

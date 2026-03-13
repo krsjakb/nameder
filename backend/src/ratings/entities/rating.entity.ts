@@ -1,4 +1,12 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, Unique, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  Unique,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Participant } from '../../sessions/entities/participant.entity';
 import { GivenName } from '../../names/entities/given-name.entity';
 import { Session } from '../../sessions/entities/session.entity';
@@ -15,13 +23,17 @@ export class Rating {
   @Column({ type: 'uuid' })
   participantId!: string;
 
-  @ManyToOne(() => Participant, (participant) => participant.ratings, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Participant, (participant) => participant.ratings, {
+    onDelete: 'CASCADE',
+  })
   participant!: Participant;
 
   @Column({ type: 'uuid' })
   sessionId!: string;
 
-  @ManyToOne(() => Session, (session) => session.ratings, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Session, (session) => session.ratings, {
+    onDelete: 'CASCADE',
+  })
   session!: Session;
 
   @Column({ type: 'uuid' })

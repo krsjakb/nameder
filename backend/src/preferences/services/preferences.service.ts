@@ -18,7 +18,10 @@ export class PreferencesService {
   ) {}
 
   async setPreference(sessionId: string, dto: SetPreferenceDto) {
-    const participant = await this.sessionsService.ensureParticipant(sessionId, dto.participantId);
+    const participant = await this.sessionsService.ensureParticipant(
+      sessionId,
+      dto.participantId,
+    );
 
     const preference = await this.preferenceRepository.findOne({
       where: { sessionId, participantId: participant.id, nameId: dto.nameId },
@@ -38,6 +41,19 @@ export class PreferencesService {
     return this.preferenceRepository.save(newPreference);
   }
 
+  async removePreference(
+    sessionId: string,
+    participantId: string,
+    nameId: string,
+  ) {
+    await this.sessionsService.ensureParticipant(sessionId, participantId);
+    await this.preferenceRepository.delete({
+      sessionId,
+      participantId,
+      nameId,
+    });
+  }
+
   async getMutualNames(sessionId: string) {
     const { session } = await this.sessionsService.getSessionDetails(sessionId);
     const participantCount = Math.max(2, session.participants.length);
@@ -48,7 +64,9 @@ export class PreferencesService {
       .where('preference.sessionId = :sessionId', { sessionId })
       .andWhere('preference.value = :like', { like: PreferenceValue.LIKE })
       .groupBy('preference.nameId')
-      .having('COUNT(DISTINCT preference.participantId) >= :participantCount', { participantCount })
+      .having('COUNT(DISTINCT preference.participantId) >= :participantCount', {
+        participantCount,
+      })
       .getRawMany();
 
     const nameIds = mutualResults.map((row: { nameId: string }) => row.nameId);
@@ -72,5 +90,26 @@ export class PreferencesService {
       where: { sessionId, participantId, value: PreferenceValue.DISLIKE },
     });
     return { likes: likeCount, dislikes: dislikeCount };
+  }
+
+  async getParticipantLikes(sessionId: string, participantId: string) {
+    await this.sessionsService.ensureParticipant(sessionId, participantId);
+
+    const likes = await this.preferenceRepository.find({
+      where: { sessionId, participantId, value: PreferenceValue.LIKE },
+      select: ['nameId'],
+    });
+
+    const nameIds = likes.map((like) => like.nameId);
+
+    if (nameIds.length === 0) {
+      return [];
+    }
+
+    return this.givenNameRepository
+      .createQueryBuilder('name')
+      .where('name.id IN (:...nameIds)', { nameIds })
+      .orderBy('name.value', 'ASC')
+      .getMany();
   }
 }

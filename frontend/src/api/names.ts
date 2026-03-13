@@ -1,14 +1,22 @@
+import axios from 'axios'
 import apiClient from './client'
 import type { Gender, MutualName, NextNameResponse, Recommendation } from './types'
 
 export async function getNextName(sessionId: string, participantId: string, preferredGender?: Gender) {
-  const response = await apiClient.get<NextNameResponse>(`/sessions/${sessionId}/names/next`, {
-    params: {
-      participantId,
-      preferredGender,
-    },
-  })
-  return response.data
+  try {
+    const response = await apiClient.get<NextNameResponse>(`/sessions/${sessionId}/names/next`, {
+      params: {
+        participantId,
+        preferredGender,
+      },
+    })
+    return response.data
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return null
+    }
+    throw error
+  }
 }
 
 export async function getRecommendations(sessionId: string, limit = 8, gender?: Gender) {

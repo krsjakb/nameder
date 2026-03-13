@@ -1,4 +1,11 @@
-import { IsEnum, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Gender } from '../../common/enums/gender.enum';
 
 export class SearchNamesQueryDto {

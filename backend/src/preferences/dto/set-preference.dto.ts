@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsEnum, IsUUID } from 'class-validator';
 import { PreferenceValue } from '../../common/enums/preference-value.enum';
 
 export class SetPreferenceDto {

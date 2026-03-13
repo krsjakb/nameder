@@ -12,6 +12,8 @@ interface SwipeCardProps {
   onLike: () => void
   onDislike: () => void
   disabled?: boolean
+  onUndo?: () => void
+  undoDisabled?: boolean
   recommendations: Recommendation[]
 }
 
@@ -24,6 +26,8 @@ export const SwipeCard = memo(function SwipeCard({
   onLike,
   onDislike,
   disabled,
+  onUndo,
+  undoDisabled,
   recommendations,
 }: SwipeCardProps) {
   return (
@@ -34,6 +38,14 @@ export const SwipeCard = memo(function SwipeCard({
       </div>
       <div className="swipe__score">Hangzás pontszám: {score.toFixed(2)}</div>
       <div className="swipe__actions">
+        <Button
+          variant="ghost"
+          onClick={onUndo}
+          disabled={!onUndo || undoDisabled}
+          aria-label="Lépj vissza az előző névre"
+        >
+          ↩️ Vissza
+        </Button>
         <Button variant="ghost" onClick={onDislike} disabled={disabled} aria-label="Nem tetszik (balra)">
           ❌ Nem
         </Button>

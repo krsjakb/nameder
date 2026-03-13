@@ -9,8 +9,15 @@ export class NamesController {
   constructor(private readonly namesService: NamesService) {}
 
   @Get('sessions/:sessionId/names/next')
-  async getNextName(@Param('sessionId') sessionId: string, @Query() query: NextNameQueryDto) {
-    const result = await this.namesService.getNextName(sessionId, query.participantId, query.preferredGender);
+  async getNextName(
+    @Param('sessionId') sessionId: string,
+    @Query() query: NextNameQueryDto,
+  ) {
+    const result = await this.namesService.getNextName(
+      sessionId,
+      query.participantId,
+      query.preferredGender,
+    );
     return {
       name: {
         id: result.name.id,
@@ -31,7 +38,10 @@ export class NamesController {
     @Query('gender') gender?: string,
   ) {
     const parsedLimit = limit ? Number(limit) : 10;
-    const normalizedGender = gender && Object.values(Gender).includes(gender as Gender) ? (gender as Gender) : undefined;
+    const normalizedGender =
+      gender && Object.values(Gender).includes(gender as Gender)
+        ? (gender as Gender)
+        : undefined;
     const recommendations = await this.namesService.getRecommendations(
       sessionId,
       Number.isNaN(parsedLimit) ? 10 : parsedLimit,
@@ -43,7 +53,11 @@ export class NamesController {
   @Get('names/search')
   async searchNames(@Query() query: SearchNamesQueryDto) {
     const limit = query.limit ?? 20;
-    const results = await this.namesService.searchNames(query.query, query.gender, limit);
+    const results = await this.namesService.searchNames(
+      query.query,
+      query.gender,
+      limit,
+    );
     return results.map((name) => ({
       id: name.id,
       value: name.value,

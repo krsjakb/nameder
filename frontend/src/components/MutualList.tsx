@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import type { MutualName, ParticipantRating, RatingSummary } from '../api/types'
 import Button from './Button'
 import Card from './Card'
+import SearchBar from './SearchBar'
 
 interface MutualListProps {
   names: MutualName[]
@@ -11,6 +13,8 @@ interface MutualListProps {
 }
 
 export function MutualList({ names, ratings, participantRatings, onRate, canRate = true }: MutualListProps) {
+  const [searchQuery, setSearchQuery] = useState('')
+
   if (!names.length) {
     return (
       <Card>
@@ -22,11 +26,16 @@ export function MutualList({ names, ratings, participantRatings, onRate, canRate
   const ratingMap = new Map(ratings.map((rating) => [rating.nameId, rating]))
   const participantMap = new Map(participantRatings.map((rating) => [rating.nameId, rating.score]))
 
+  const filteredNames = searchQuery
+    ? names.filter((name) => name.value.toLowerCase().includes(searchQuery.toLowerCase()))
+    : names
+
   return (
     <Card className="mutual">
       <h3>Közös kedvencek</h3>
+      <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Keresés a közös kedvencek között..." />
       <ul className="mutual__list">
-        {names.map((name) => {
+        {filteredNames.map((name) => {
           const aggregate = ratingMap.get(name.id)
           const ownScore = participantMap.get(name.id)
           return (

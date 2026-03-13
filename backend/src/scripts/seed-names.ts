@@ -2,19 +2,25 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import AppDataSource from '../database/data-source';
 import { GivenName } from '../names/entities/given-name.entity';
-import { Preference } from '../preferences/entities/preference.entity';
-import { Rating } from '../ratings/entities/rating.entity';
 import { Gender } from '../common/enums/gender.enum';
-import { estimateSyllableCount, normalizeHungarianText, scoreNameForLastName } from '../common/utils/text';
+import {
+  estimateSyllableCount,
+  normalizeHungarianText,
+  scoreNameForLastName,
+} from '../common/utils/text';
 
 function loadNames(relativePath: string): string[] {
-  const absolutePath = resolve(__dirname, '../../node_modules/hungarian-names', relativePath);
+  const absolutePath = resolve(
+    __dirname,
+    '../../node_modules/hungarian-names',
+    relativePath,
+  );
   const raw = readFileSync(absolutePath, 'utf-8');
-  const json = JSON.parse(raw);
+  const json = JSON.parse(raw) as { names?: unknown[] };
   if (Array.isArray(json.names)) {
-    return json.names.flatMap((entry: unknown) => {
+    return json.names.flatMap((entry: unknown): string[] => {
       if (Array.isArray(entry)) {
-        return entry;
+        return entry as string[];
       }
       if (typeof entry === 'string') {
         return [entry];
@@ -32,7 +38,9 @@ async function seed() {
   const maleNames = loadNames('names/ferfinevek.json');
   const femaleNames = loadNames('names/noinevek.json');
 
-  await AppDataSource.manager.query('TRUNCATE TABLE "preferences", "ratings", "given_names" RESTART IDENTITY CASCADE');
+  await AppDataSource.manager.query(
+    'TRUNCATE TABLE "preferences", "ratings", "given_names" RESTART IDENTITY CASCADE',
+  );
 
   const defaultLastName = 'Kovács';
   const nameMap = new Map<string, GivenName>();
