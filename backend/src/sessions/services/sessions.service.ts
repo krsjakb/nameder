@@ -112,7 +112,9 @@ export class SessionsService {
       : null;
 
     const participantPreferences = participantId
-      ? await this.preferenceRepository.count({ where: { participantId, sessionId } })
+      ? await this.preferenceRepository.count({
+          where: { participantId, sessionId },
+        })
       : 0;
 
     const ratedMutualCount = participantId
@@ -138,7 +140,9 @@ export class SessionsService {
   }
 
   async updatePhase(sessionId: string, dto: UpdateSessionPhaseDto) {
-    const session = await this.sessionRepository.findOne({ where: { id: sessionId } });
+    const session = await this.sessionRepository.findOne({
+      where: { id: sessionId },
+    });
     if (!session) {
       throw new NotFoundException('Session not found');
     }
@@ -149,7 +153,9 @@ export class SessionsService {
   }
 
   async ensureParticipant(sessionId: string, participantId: string) {
-    const participant = await this.participantRepository.findOne({ where: { id: participantId, sessionId } });
+    const participant = await this.participantRepository.findOne({
+      where: { id: participantId, sessionId },
+    });
     if (!participant) {
       throw new NotFoundException('Participant not found for session');
     }
@@ -157,10 +163,16 @@ export class SessionsService {
   }
 
   private generateSessionCode() {
-    return randomUUID().replace(/[^A-Z0-9]/gi, '').slice(0, 6).toUpperCase();
+    return randomUUID()
+      .replace(/[^A-Z0-9]/gi, '')
+      .slice(0, 6)
+      .toUpperCase();
   }
 
   private generateInviteCode() {
-    return randomUUID().replace(/[^A-Z0-9]/gi, '').slice(0, 10).toUpperCase();
+    return randomUUID()
+      .replace(/[^A-Z0-9]/gi, '')
+      .slice(0, 10)
+      .toUpperCase();
   }
 }

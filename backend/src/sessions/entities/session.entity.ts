@@ -1,4 +1,12 @@
-import { Column, CreateDateColumn, Entity, Index, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Participant } from './participant.entity';
 import { SessionPhase } from '../../common/enums/session-phase.enum';
 import { Preference } from '../../preferences/entities/preference.entity';

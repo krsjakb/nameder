@@ -8,10 +8,10 @@ import { Preference } from '../preferences/entities/preference.entity';
 import { GivenName } from '../names/entities/given-name.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Session, Participant, Preference, GivenName]),
-    ],
-    controllers: [AdminController],
-    providers: [AdminService],
+  imports: [
+    TypeOrmModule.forFeature([Session, Participant, Preference, GivenName]),
+  ],
+  controllers: [AdminController],
+  providers: [AdminService],
 })
-export class AdminModule { }
+export class AdminModule {}

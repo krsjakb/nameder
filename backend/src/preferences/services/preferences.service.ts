@@ -15,10 +15,13 @@ export class PreferencesService {
     @InjectRepository(GivenName)
     private readonly givenNameRepository: Repository<GivenName>,
     private readonly sessionsService: SessionsService,
-  ) { }
+  ) {}
 
   async setPreference(sessionId: string, dto: SetPreferenceDto) {
-    const participant = await this.sessionsService.ensureParticipant(sessionId, dto.participantId);
+    const participant = await this.sessionsService.ensureParticipant(
+      sessionId,
+      dto.participantId,
+    );
 
     const preference = await this.preferenceRepository.findOne({
       where: { sessionId, participantId: participant.id, nameId: dto.nameId },
@@ -38,9 +41,17 @@ export class PreferencesService {
     return this.preferenceRepository.save(newPreference);
   }
 
-  async removePreference(sessionId: string, participantId: string, nameId: string) {
+  async removePreference(
+    sessionId: string,
+    participantId: string,
+    nameId: string,
+  ) {
     await this.sessionsService.ensureParticipant(sessionId, participantId);
-    await this.preferenceRepository.delete({ sessionId, participantId, nameId });
+    await this.preferenceRepository.delete({
+      sessionId,
+      participantId,
+      nameId,
+    });
   }
 
   async getMutualNames(sessionId: string) {
@@ -53,7 +64,9 @@ export class PreferencesService {
       .where('preference.sessionId = :sessionId', { sessionId })
       .andWhere('preference.value = :like', { like: PreferenceValue.LIKE })
       .groupBy('preference.nameId')
-      .having('COUNT(DISTINCT preference.participantId) >= :participantCount', { participantCount })
+      .having('COUNT(DISTINCT preference.participantId) >= :participantCount', {
+        participantCount,
+      })
       .getRawMany();
 
     const nameIds = mutualResults.map((row: { nameId: string }) => row.nameId);

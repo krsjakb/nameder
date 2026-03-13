@@ -4,7 +4,11 @@ import { Repository } from 'typeorm';
 import { GivenName } from '../entities/given-name.entity';
 import { Session } from '../../sessions/entities/session.entity';
 import { Preference } from '../../preferences/entities/preference.entity';
-import { scoreNameForLastName, normalizeHungarianText, estimateSyllableCount } from '../../common/utils/text';
+import {
+  scoreNameForLastName,
+  normalizeHungarianText,
+  estimateSyllableCount,
+} from '../../common/utils/text';
 import { Gender } from '../../common/enums/gender.enum';
 
 interface NextNameResult {
@@ -23,10 +27,16 @@ export class NamesService {
     private readonly sessionsRepository: Repository<Session>,
     @InjectRepository(Preference)
     private readonly preferenceRepository: Repository<Preference>,
-  ) { }
+  ) {}
 
-  async getNextName(sessionId: string, participantId: string, preferredGender?: Gender): Promise<NextNameResult> {
-    const session = await this.sessionsRepository.findOne({ where: { id: sessionId } });
+  async getNextName(
+    sessionId: string,
+    participantId: string,
+    preferredGender?: Gender,
+  ): Promise<NextNameResult> {
+    const session = await this.sessionsRepository.findOne({
+      where: { id: sessionId },
+    });
     if (!session) {
       throw new NotFoundException('Session not found');
     }
@@ -36,7 +46,7 @@ export class NamesService {
       .select('preference.nameId', 'nameId')
       .where('preference.participantId = :participantId', { participantId })
       .andWhere('preference.sessionId = :sessionId', { sessionId })
-      .getRawMany();
+      .getRawMany<{ nameId: string }>();
 
     // Also exclude names that ANY participant has disliked
     const dislikedByAnyIds = await this.preferenceRepository
@@ -44,12 +54,14 @@ export class NamesService {
       .select('preference.nameId', 'nameId')
       .where('preference.sessionId = :sessionId', { sessionId })
       .andWhere('preference.value = :value', { value: 'DISLIKE' })
-      .getRawMany();
+      .getRawMany<{ nameId: string }>();
 
-    const excludedIds = [...new Set([
-      ...ratedIds.map((row) => row.nameId),
-      ...dislikedByAnyIds.map((row) => row.nameId),
-    ])];
+    const excludedIds = [
+      ...new Set([
+        ...ratedIds.map((row) => row.nameId),
+        ...dislikedByAnyIds.map((row) => row.nameId),
+      ]),
+    ];
 
     const qb = this.namesRepository.createQueryBuilder('name');
     if (excludedIds.length) {
@@ -63,12 +75,17 @@ export class NamesService {
       }
     }
 
-    const candidateNames = await qb.orderBy('name.baseScore', 'DESC').limit(50).getMany();
+    const candidateNames = await qb
+      .orderBy('name.baseScore', 'DESC')
+      .limit(50)
+      .getMany();
 
     const scoredCandidates = candidateNames
       .map((candidate) => ({
         candidate,
-        score: scoreNameForLastName(candidate.value, session.lastName) + candidate.baseScore,
+        score:
+          scoreNameForLastName(candidate.value, session.lastName) +
+          candidate.baseScore,
         tieBreaker: Math.random(),
       }))
       .sort((a, b) => {
@@ -98,7 +115,9 @@ export class NamesService {
   }
 
   async getRecommendations(sessionId: string, limit = 10, gender?: Gender) {
-    const session = await this.sessionsRepository.findOne({ where: { id: sessionId } });
+    const session = await this.sessionsRepository.findOne({
+      where: { id: sessionId },
+    });
     if (!session) {
       throw new NotFoundException('Session not found');
     }
@@ -107,12 +126,17 @@ export class NamesService {
     if (gender) {
       qb.where('name.gender = :gender', { gender });
     }
-    const candidates = await qb.orderBy('name.baseScore', 'DESC').limit(200).getMany();
+    const candidates = await qb
+      .orderBy('name.baseScore', 'DESC')
+      .limit(200)
+      .getMany();
 
     const ranked = candidates
       .map((candidate) => ({
         candidate,
-        score: scoreNameForLastName(candidate.value, session.lastName) + candidate.baseScore,
+        score:
+          scoreNameForLastName(candidate.value, session.lastName) +
+          candidate.baseScore,
       }))
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
@@ -129,12 +153,17 @@ export class NamesService {
   async searchNames(query: string | undefined, gender?: Gender, limit = 20) {
     const qb = this.namesRepository.createQueryBuilder('name');
     if (query) {
-      qb.where('name.normalizedValue ILIKE :query', { query: `%${normalizeHungarianText(query)}%` });
+      qb.where('name.normalizedValue ILIKE :query', {
+        query: `%${normalizeHungarianText(query)}%`,
+      });
     }
     if (gender) {
       qb.andWhere('name.gender = :gender', { gender });
     }
-    const results = await qb.orderBy('name.baseScore', 'DESC').limit(limit).getMany();
+    const results = await qb
+      .orderBy('name.baseScore', 'DESC')
+      .limit(limit)
+      .getMany();
     return results;
   }
 

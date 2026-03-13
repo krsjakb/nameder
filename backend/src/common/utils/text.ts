@@ -17,7 +17,7 @@ export function normalizeHungarianText(value: string): string {
   return value
     .toLowerCase()
     .split('')
-    .map((char) => accentMap[char as keyof typeof accentMap] ?? char)
+    .map((char) => accentMap[char] ?? char)
     .join('')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
@@ -30,7 +30,10 @@ export function estimateSyllableCount(value: string): number {
     .filter((char) => hungarianVowels.has(char)).length;
 }
 
-export function scoreNameForLastName(givenName: string, lastName: string): number {
+export function scoreNameForLastName(
+  givenName: string,
+  lastName: string,
+): number {
   const normalizedGiven = normalizeHungarianText(givenName);
   const normalizedLast = normalizeHungarianText(lastName);
 
@@ -70,7 +73,10 @@ export function scoreNameForLastName(givenName: string, lastName: string): numbe
   const lengthDiff = Math.abs(normalizedGiven.replace(/\s+/g, '').length - 5);
   score -= lengthDiff * 0.1;
 
-  const repeatedBigramPenalty = computeRepeatedBigramPenalty(normalizedGiven, normalizedLast);
+  const repeatedBigramPenalty = computeRepeatedBigramPenalty(
+    normalizedGiven,
+    normalizedLast,
+  );
   score -= repeatedBigramPenalty;
 
   return Number(score.toFixed(3));

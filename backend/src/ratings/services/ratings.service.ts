@@ -28,14 +28,20 @@ export class RatingsService {
       .andWhere('preference.value = :value', { value: PreferenceValue.LIKE })
       .groupBy('preference.nameId')
       .having('COUNT(DISTINCT preference.participantId) >= :min', { min: 2 })
-      .getRawOne();
+      .getRawOne<{ nameId: string; likers: string }>();
 
     if (!mutual) {
-      throw new BadRequestException('Name must be mutually liked before rating');
+      throw new BadRequestException(
+        'Name must be mutually liked before rating',
+      );
     }
 
     const existing = await this.ratingRepository.findOne({
-      where: { sessionId, participantId: dto.participantId, nameId: dto.nameId },
+      where: {
+        sessionId,
+        participantId: dto.participantId,
+        nameId: dto.nameId,
+      },
     });
     if (existing) {
       existing.score = dto.score;
@@ -64,7 +70,13 @@ export class RatingsService {
       .addGroupBy('name.id')
       .orderBy('average', 'DESC')
       .addOrderBy('votes', 'DESC')
-      .getRawMany();
+      .getRawMany<{
+        nameId: string;
+        nameValue: string;
+        nameGender: string;
+        average: string;
+        votes: string;
+      }>();
 
     return rows.map((row) => ({
       nameId: row.nameId,

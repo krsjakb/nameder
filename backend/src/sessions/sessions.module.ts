@@ -8,7 +8,9 @@ import { Preference } from '../preferences/entities/preference.entity';
 import { Rating } from '../ratings/entities/rating.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Session, Participant, Preference, Rating])],
+  imports: [
+    TypeOrmModule.forFeature([Session, Participant, Preference, Rating]),
+  ],
   controllers: [SessionsController],
   providers: [SessionsService],
   exports: [SessionsService, TypeOrmModule],

@@ -24,7 +24,15 @@ import { Rating } from './ratings/entities/rating.entity';
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const dbConfig = configService.get('database');
+        const dbConfig = configService.get<{
+          host: string;
+          port: number;
+          username: string;
+          password: string;
+          name: string;
+          ssl: boolean;
+          synchronize: boolean;
+        }>('database')!;
         return {
           type: 'postgres',
           host: dbConfig.host,
@@ -46,4 +54,4 @@ import { Rating } from './ratings/entities/rating.entity';
     AdminModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}

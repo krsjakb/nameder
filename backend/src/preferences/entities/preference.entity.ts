@@ -1,4 +1,12 @@
-import { Column, CreateDateColumn, Entity, Index, ManyToOne, PrimaryGeneratedColumn, Unique, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  Unique,
+  UpdateDateColumn,
+} from 'typeorm';
 import { PreferenceValue } from '../../common/enums/preference-value.enum';
 import { Participant } from '../../sessions/entities/participant.entity';
 import { GivenName } from '../../names/entities/given-name.entity';

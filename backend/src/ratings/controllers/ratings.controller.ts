@@ -7,7 +7,10 @@ export class RatingsController {
   constructor(private readonly ratingsService: RatingsService) {}
 
   @Post()
-  async upsertRating(@Param('sessionId') sessionId: string, @Body() dto: UpsertRatingDto) {
+  async upsertRating(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: UpsertRatingDto,
+  ) {
     const rating = await this.ratingsService.upsertRating(sessionId, dto);
     return {
       id: rating.id,
@@ -28,7 +31,10 @@ export class RatingsController {
     @Param('sessionId') sessionId: string,
     @Query('participantId') participantId: string,
   ) {
-    const ratings = await this.ratingsService.getParticipantRatings(sessionId, participantId);
+    const ratings = await this.ratingsService.getParticipantRatings(
+      sessionId,
+      participantId,
+    );
     return ratings;
   }
 }

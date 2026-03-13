@@ -1,14 +1,28 @@
-import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { PreferencesService } from '../services/preferences.service';
 import { SetPreferenceDto } from '../dto/set-preference.dto';
 
 @Controller('sessions/:sessionId/preferences')
 export class PreferencesController {
-  constructor(private readonly preferencesService: PreferencesService) { }
+  constructor(private readonly preferencesService: PreferencesService) {}
 
   @Post()
-  async setPreference(@Param('sessionId') sessionId: string, @Body() dto: SetPreferenceDto) {
-    const preference = await this.preferencesService.setPreference(sessionId, dto);
+  async setPreference(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: SetPreferenceDto,
+  ) {
+    const preference = await this.preferencesService.setPreference(
+      sessionId,
+      dto,
+    );
     return {
       id: preference.id,
       value: preference.value,
@@ -23,7 +37,11 @@ export class PreferencesController {
     @Param('nameId') nameId: string,
     @Query('participantId') participantId: string,
   ) {
-    await this.preferencesService.removePreference(sessionId, participantId, nameId);
+    await this.preferencesService.removePreference(
+      sessionId,
+      participantId,
+      nameId,
+    );
     return { success: true };
   }
 
@@ -38,14 +56,26 @@ export class PreferencesController {
   }
 
   @Get('summary')
-  async getSummary(@Param('sessionId') sessionId: string, @Query('participantId') participantId: string) {
-    const summary = await this.preferencesService.getParticipantSummary(sessionId, participantId);
+  async getSummary(
+    @Param('sessionId') sessionId: string,
+    @Query('participantId') participantId: string,
+  ) {
+    const summary = await this.preferencesService.getParticipantSummary(
+      sessionId,
+      participantId,
+    );
     return summary;
   }
 
   @Get('my-likes')
-  async getMyLikes(@Param('sessionId') sessionId: string, @Query('participantId') participantId: string) {
-    const likes = await this.preferencesService.getParticipantLikes(sessionId, participantId);
+  async getMyLikes(
+    @Param('sessionId') sessionId: string,
+    @Query('participantId') participantId: string,
+  ) {
+    const likes = await this.preferencesService.getParticipantLikes(
+      sessionId,
+      participantId,
+    );
     return likes.map((name) => ({
       id: name.id,
       value: name.value,
